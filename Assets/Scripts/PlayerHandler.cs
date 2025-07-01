@@ -7,10 +7,18 @@ public class PlayerHandler : NetworkBehaviour
 
     private void Start()
     {
-        if (!IsOwner) return;
+        // Assign only for owner to connect UI
+        if (IsOwner)
+        {
+            gameManager = FindObjectOfType<RPSGameManager>();
+            FindObjectOfType<UIManager>().SetPlayer(this);
+        }
 
-        gameManager = FindObjectOfType<RPSGameManager>();
-        FindObjectOfType<UIManager>().SetPlayer(this);
+        // Always assign gameManager even on server side
+        if (IsServer && gameManager == null)
+        {
+            gameManager = FindObjectOfType<RPSGameManager>();
+        }
     }
 
     public void MakeChoice(string choice)
@@ -18,9 +26,19 @@ public class PlayerHandler : NetworkBehaviour
         SubmitChoiceServerRpc(choice);
     }
 
-    [ServerRpc]
+    [ServerRpc(RequireOwnership = false)]
     private void SubmitChoiceServerRpc(string choice, ServerRpcParams rpcParams = default)
     {
+        if (gameManager == null)
+        {
+            gameManager = FindObjectOfType<RPSGameManager>();
+            if (gameManager == null)
+            {
+                Debug.LogError("SubmitChoiceServerRpc failed: RPSGameManager not found.");
+                return;
+            }
+        }
+
         gameManager.RegisterChoice(choice, OwnerClientId);
     }
 }

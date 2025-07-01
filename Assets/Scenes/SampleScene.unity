@@ -150,6 +150,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   hostButton: {fileID: 296121136}
   clientButton: {fileID: 937174610}
+  serverPort: 7777
 --- !u!4 &53508498
 Transform:
   m_ObjectHideFlags: 0
@@ -327,9 +328,9 @@ RectTransform:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 296121134}
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 2.6148813, y: 2.6148813, z: 2.6148813}
+  m_LocalScale: {x: 1.5978233, y: 1.5978233, z: 1.5978233}
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 692214686}
@@ -337,7 +338,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: -560.99, y: -334.35}
+  m_AnchoredPosition: {x: -684, y: -390}
   m_SizeDelta: {x: 160, y: 30}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &296121136
@@ -886,9 +887,9 @@ RectTransform:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 937174608}
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 2.6148813, y: 2.6148813, z: 2.6148813}
+  m_LocalScale: {x: 1.5978233, y: 1.5978233, z: 1.5978233}
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 1891491908}
@@ -896,7 +897,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: -560.99, y: -252.56}
+  m_AnchoredPosition: {x: -684, y: -312}
   m_SizeDelta: {x: 160, y: 30}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &937174610
@@ -2223,8 +2224,8 @@ SceneRoots:
   - {fileID: 519420032}
   - {fileID: 619394802}
   - {fileID: 1135150855}
-  - {fileID: 1876869125}
   - {fileID: 934708417}
   - {fileID: 5487040030884018043}
   - {fileID: 6298711150020555831}
   - {fileID: 53508498}
+  - {fileID: 1876869125}
