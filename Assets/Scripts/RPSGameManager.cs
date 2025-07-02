@@ -11,6 +11,8 @@ public class RPSGameManager : NetworkBehaviour
 
     public void RegisterChoice(string choice, ulong clientId)
     {
+        Debug.Log($"[SERVER] {clientId} chose {choice}");
+
         if (player1Choice == null)
         {
             player1Choice = choice;
@@ -32,6 +34,7 @@ public class RPSGameManager : NetworkBehaviour
     {
         string resultP1, resultP2;
 
+        // Determine who wins
         if (player1Choice == player2Choice)
         {
             resultP1 = resultP2 = "Draw!";
@@ -49,18 +52,32 @@ public class RPSGameManager : NetworkBehaviour
             resultP2 = "You Win!";
         }
 
-        ShowResultClientRpc(resultP1, player1Id);
-        ShowResultClientRpc(resultP2, player2Id);
+        Debug.Log($"[SERVER] P1({player1Choice}) vs P2({player2Choice}) → {resultP1} / {resultP2}");
 
-        player1Choice = player2Choice = null;
+        // Reveal both choices and results to each player
+        ShowResultClientRpc(player1Choice, player2Choice, resultP1, player1Id);
+        ShowResultClientRpc(player1Choice, player2Choice, resultP2, player2Id);
+
+        // Reset for next round
+        player1Choice = null;
+        player2Choice = null;
     }
 
     [ClientRpc]
-    private void ShowResultClientRpc(string result, ulong clientId)
+    private void ShowResultClientRpc(string p1Choice, string p2Choice, string result, ulong clientId)
     {
         if (NetworkManager.Singleton.LocalClientId == clientId)
         {
-            FindObjectOfType<UIManager>().DisplayResult(result);
+            UIManager ui = FindObjectOfType<UIManager>();
+            if (ui != null)
+            {
+                ui.RevealChoices(p1Choice, p2Choice);
+                ui.DisplayResult(result);
+            }
+            else
+            {
+                Debug.LogWarning("UIManager not found in scene.");
+            }
         }
     }
 }

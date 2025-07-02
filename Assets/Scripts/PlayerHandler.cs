@@ -5,13 +5,16 @@ public class PlayerHandler : NetworkBehaviour
 {
     public RPSGameManager gameManager;
 
+    private UIManager uiManager;
+
     private void Start()
     {
         // Assign only for owner to connect UI
         if (IsOwner)
         {
             gameManager = FindObjectOfType<RPSGameManager>();
-            FindObjectOfType<UIManager>().SetPlayer(this);
+            uiManager = FindObjectOfType<UIManager>();
+            uiManager.SetPlayer(this);
         }
 
         // Always assign gameManager even on server side
@@ -23,6 +26,10 @@ public class PlayerHandler : NetworkBehaviour
 
     public void MakeChoice(string choice)
     {
+        // Optional: show own choice early
+        bool isPlayer1 = IsServer; // Simplified; adjust if needed
+        uiManager?.ShowOwnChoice(choice, isPlayer1);
+
         SubmitChoiceServerRpc(choice);
     }
 
@@ -40,5 +47,15 @@ public class PlayerHandler : NetworkBehaviour
         }
 
         gameManager.RegisterChoice(choice, OwnerClientId);
+    }
+
+    [ClientRpc]
+    public void RevealChoicesClientRpc(string p1Choice, string p2Choice, string result)
+    {
+        if (uiManager == null)
+            uiManager = FindObjectOfType<UIManager>();
+
+        uiManager.RevealChoices(p1Choice, p2Choice);
+        uiManager.DisplayResult(result);
     }
 }
