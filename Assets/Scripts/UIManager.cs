@@ -14,6 +14,8 @@ public class UIManager : MonoBehaviour
     public Image player1ChoiceImage;
     public Image player2ChoiceImage;
 
+    public Button quitButton;
+
     [Header("Choice Sprites")]
     public Sprite rockSprite;
     public Sprite paperSprite;
@@ -31,6 +33,8 @@ public class UIManager : MonoBehaviour
         rockButton.onClick.AddListener(() => player?.MakeChoice("Rock"));
         paperButton.onClick.AddListener(() => player?.MakeChoice("Paper"));
         scissorsButton.onClick.AddListener(() => player?.MakeChoice("Scissors"));
+        quitButton.onClick.AddListener(QuitGame);
+
 
         // Setup sprite dictionary
         choiceSprites = new Dictionary<string, Sprite>
@@ -72,4 +76,15 @@ public class UIManager : MonoBehaviour
     {
         resultText.text = result;
     }
+    
+     public void QuitGame()
+    {
+        Debug.Log("Quit button pressed.");
+#if UNITY_EDITOR
+        UnityEditor.EditorApplication.isPlaying = false; // Editor
+#else
+        Application.Quit(); // Build
+#endif
+    }
+
 }
