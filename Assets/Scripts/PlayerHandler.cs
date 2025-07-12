@@ -4,12 +4,10 @@ using UnityEngine;
 public class PlayerHandler : NetworkBehaviour
 {
     public RPSGameManager gameManager;
-
     private UIManager uiManager;
 
     private void Start()
     {
-        // Assign only for owner to connect UI
         if (IsOwner)
         {
             gameManager = FindObjectOfType<RPSGameManager>();
@@ -17,7 +15,6 @@ public class PlayerHandler : NetworkBehaviour
             uiManager.SetPlayer(this);
         }
 
-        // Always assign gameManager even on server side
         if (IsServer && gameManager == null)
         {
             gameManager = FindObjectOfType<RPSGameManager>();
@@ -26,10 +23,6 @@ public class PlayerHandler : NetworkBehaviour
 
     public void MakeChoice(string choice)
     {
-        // Optional: show own choice early
-        bool isPlayer1 = IsServer; // Simplified; adjust if needed
-        uiManager?.ShowOwnChoice(choice, isPlayer1);
-
         SubmitChoiceServerRpc(choice);
     }
 
@@ -46,7 +39,23 @@ public class PlayerHandler : NetworkBehaviour
             }
         }
 
+        // Send choice back to the client to display hand early
+        ShowOwnChoiceClientRpc(choice, OwnerClientId);
+
         gameManager.RegisterChoice(choice, OwnerClientId);
+    }
+
+    [ClientRpc]
+    public void ShowOwnChoiceClientRpc(string choice, ulong clientId)
+    {
+        if (NetworkManager.Singleton.LocalClientId != clientId)
+            return;
+
+        if (uiManager == null)
+            uiManager = FindObjectOfType<UIManager>();
+
+        bool isPlayer1 = IsServer;
+        uiManager?.ShowOwnChoice(choice, isPlayer1);
     }
 
     [ClientRpc]

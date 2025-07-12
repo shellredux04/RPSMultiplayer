@@ -13,7 +13,6 @@ public class UIManager : MonoBehaviour
     public Text resultText;
     public Image player1ChoiceImage;
     public Image player2ChoiceImage;
-
     public Button quitButton;
 
     [Header("Choice Sprites")]
@@ -35,7 +34,6 @@ public class UIManager : MonoBehaviour
         scissorsButton.onClick.AddListener(() => player?.MakeChoice("Scissors"));
         quitButton.onClick.AddListener(QuitGame);
 
-
         // Setup sprite dictionary
         choiceSprites = new Dictionary<string, Sprite>
         {
@@ -54,7 +52,6 @@ public class UIManager : MonoBehaviour
         player = handler;
     }
 
-    // Show only your own choice for now
     public void ShowOwnChoice(string choice, bool isPlayer1)
     {
         Image target = isPlayer1 ? player1ChoiceImage : player2ChoiceImage;
@@ -62,7 +59,6 @@ public class UIManager : MonoBehaviour
         target.gameObject.SetActive(true);
     }
 
-    // Reveal both players’ choices after both have submitted
     public void RevealChoices(string p1Choice, string p2Choice)
     {
         player1ChoiceImage.sprite = choiceSprites[p1Choice];
@@ -76,15 +72,14 @@ public class UIManager : MonoBehaviour
     {
         resultText.text = result;
     }
-    
-     public void QuitGame()
+
+    public void QuitGame()
     {
         Debug.Log("Quit button pressed.");
 #if UNITY_EDITOR
-        UnityEditor.EditorApplication.isPlaying = false; // Editor
+        UnityEditor.EditorApplication.isPlaying = false;
 #else
-        Application.Quit(); // Build
+        Application.Quit();
 #endif
     }
-
 }

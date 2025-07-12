@@ -8,7 +8,7 @@ public class NetworkManagerUI : MonoBehaviour
     public Button hostButton;
     public Button clientButton;
 
-    public ushort serverPort = 7777; // Default port (change this if needed)
+    public ushort serverPort = 7777;
 
     private void Start()
     {
