@@ -22,24 +22,16 @@ public class LobbyManager : MonoBehaviour
 
     private async void Start()
     {
-        Debug.Log("LobbyManager Start() running");
-
-        // Ensure UnityTransport is attached
         transport = NetworkManager.Singleton.GetComponent<UnityTransport>();
 
         if (joinCodeInput != null)
         {
             joinCodeInput.onValueChanged.AddListener(OnJoinCodeInputChanged);
-            Debug.Log("Join code input listener added.");
-        }
-        else
-        {
-            Debug.LogWarning("joinCodeInput is not assigned in Inspector.");
         }
 
         await InitializeUnityServices();
-        Debug.Log("Unity Services Initialized.");
 
+        // Initial UI state
         ShowLobbyUI();
     }
 
@@ -50,13 +42,13 @@ public class LobbyManager : MonoBehaviour
 
     public void Host()
     {
-        Debug.Log("Host button clicked");
+        Debug.Log("[LobbyManager] Host() called.");
         _ = HostRelayAsync(4);
     }
 
     public void Join()
     {
-        Debug.Log($"Join button clicked. Code: {joinCode}");
+        Debug.Log("[LobbyManager] Join() called.");
 
         if (!string.IsNullOrEmpty(joinCode))
         {
@@ -64,19 +56,20 @@ public class LobbyManager : MonoBehaviour
         }
         else
         {
-            Debug.LogWarning("Join code is empty.");
+            Debug.LogWarning("[LobbyManager] Join code is empty.");
         }
     }
 
     private async Task HostRelayAsync(int maxPlayers)
     {
         ShowConnectingBuffer();
+        Debug.Log("[LobbyManager] Starting Relay host...");
 
         try
         {
-            Debug.Log("Creating Relay allocation...");
             Allocation allocation = await RelayService.Instance.CreateAllocationAsync(maxPlayers);
             string code = await RelayService.Instance.GetJoinCodeAsync(allocation.AllocationId);
+            Debug.Log($"[Relay] Join Code: {code}");
 
             transport.SetRelayServerData(
                 allocation.RelayServer.IpV4,
@@ -90,20 +83,26 @@ public class LobbyManager : MonoBehaviour
 
             if (success)
             {
-                Debug.Log("Host started successfully.");
+                Debug.Log("[LobbyManager] Host started successfully.");
                 lobbyCodeText.text = $"Lobby Code: {code}";
+                lobbyCodeText.gameObject.SetActive(true);
                 gameStartButton.SetActive(true);
                 ShowLobbyUI();
             }
             else
             {
-                Debug.LogError("Host failed to start.");
+                Debug.LogError("[LobbyManager] Host failed to start.");
                 ShowLobbyUI();
             }
         }
         catch (RelayServiceException e)
         {
-            Debug.LogError($"Relay host error: {e.Message}");
+            Debug.LogError($"[LobbyManager] Relay host error: {e.Message}");
+            ShowLobbyUI();
+        }
+        catch (System.Exception e)
+        {
+            Debug.LogError($"[LobbyManager] Unknown host error: {e.Message}");
             ShowLobbyUI();
         }
     }
@@ -111,10 +110,10 @@ public class LobbyManager : MonoBehaviour
     private async Task JoinRelayAsync(string code)
     {
         ShowConnectingBuffer();
+        Debug.Log($"[LobbyManager] Joining Relay with code: {code}");
 
         try
         {
-            Debug.Log("Joining Relay allocation...");
             JoinAllocation joinAllocation = await RelayService.Instance.JoinAllocationAsync(code);
 
             transport.SetRelayServerData(
@@ -130,50 +129,54 @@ public class LobbyManager : MonoBehaviour
 
             if (success)
             {
-                Debug.Log("Client joined successfully.");
+                Debug.Log("[LobbyManager] Client joined successfully.");
                 lobbyCodeText.text = $"Joined Lobby: {code}";
                 gameStartButton.SetActive(false);
                 ShowLobbyUI();
             }
             else
             {
-                Debug.LogError("Client failed to connect.");
+                Debug.LogError("[LobbyManager] Client failed to connect.");
                 ShowLobbyUI();
             }
         }
         catch (RelayServiceException e)
         {
-            Debug.LogError($"Relay join error: {e.Message}");
+            Debug.LogError($"[LobbyManager] Relay join error: {e.Message}");
+            ShowLobbyUI();
+        }
+        catch (System.Exception e)
+        {
+            Debug.LogError($"[LobbyManager] Unknown join error: {e.Message}");
             ShowLobbyUI();
         }
     }
 
     private async Task InitializeUnityServices()
     {
+        Debug.Log("[LobbyManager] Initializing Unity Services...");
+
         if (UnityServices.State != ServicesInitializationState.Initialized)
         {
-            Debug.Log("Initializing Unity Services...");
             await UnityServices.InitializeAsync();
         }
 
         if (!AuthenticationService.Instance.IsSignedIn)
         {
-            Debug.Log("Signing in anonymously...");
             await AuthenticationService.Instance.SignInAnonymouslyAsync();
+            Debug.Log("[LobbyManager] Signed in anonymously.");
         }
     }
 
     private void ShowLobbyUI()
     {
-        Debug.Log("Showing Lobby UI.");
-        connectingBuffer?.SetActive(false);
-        lobbyUI?.SetActive(true);
+        if (connectingBuffer != null) connectingBuffer.SetActive(false);
+        if (lobbyUI != null) lobbyUI.SetActive(true);
     }
 
     private void ShowConnectingBuffer()
     {
-        Debug.Log("Showing connecting buffer.");
-        connectingBuffer?.SetActive(true);
-        lobbyUI?.SetActive(false);
+        if (connectingBuffer != null) connectingBuffer.SetActive(true);
+        if (lobbyUI != null) lobbyUI.SetActive(false);
     }
 }
