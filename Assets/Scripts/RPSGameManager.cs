@@ -1,5 +1,7 @@
 using Unity.Netcode;
 using UnityEngine;
+using UnityEngine.UI;
+using System.Collections.Generic;
 
 public class RPSGameManager : NetworkBehaviour
 {
@@ -9,8 +11,68 @@ public class RPSGameManager : NetworkBehaviour
     private ulong player1Id;
     private ulong player2Id;
 
+    private HashSet<ulong> connectedPlayers = new HashSet<ulong>();
+    private NetworkVariable<bool> gameStarted = new NetworkVariable<bool>(false);
+
+    public Button startGameButton;
+
+    public override void OnNetworkSpawn()
+    {
+        if (IsServer)
+        {
+            NetworkManager.Singleton.OnClientConnectedCallback += OnClientConnected;
+            NetworkManager.Singleton.OnClientDisconnectCallback += OnClientDisconnected;
+        }
+
+        if (startGameButton != null)
+        {
+            startGameButton.gameObject.SetActive(false);
+        }
+    }
+
+    private void OnClientConnected(ulong clientId)
+    {
+        connectedPlayers.Add(clientId);
+        Debug.Log($"[GameManager] Player {clientId} connected. Total: {connectedPlayers.Count}");
+
+        if (connectedPlayers.Count == 2 && IsServer && startGameButton != null)
+        {
+            startGameButton.gameObject.SetActive(true);
+        }
+    }
+
+    private void OnClientDisconnected(ulong clientId)
+    {
+        connectedPlayers.Remove(clientId);
+        Debug.Log($"[GameManager] Player {clientId} disconnected. Total: {connectedPlayers.Count}");
+
+        if (startGameButton != null)
+        {
+            startGameButton.gameObject.SetActive(false);
+        }
+
+        gameStarted.Value = false;
+    }
+
+    public void StartGame()
+    {
+        if (!IsServer) return;
+
+        Debug.Log("[GameManager] Start Game button clicked.");
+        gameStarted.Value = true;
+
+        player1Choice = null;
+        player2Choice = null;
+    }
+
     public void RegisterChoice(string choice, ulong clientId)
     {
+        if (!gameStarted.Value)
+        {
+            Debug.LogWarning("[GameManager] Game has not started yet.");
+            return;
+        }
+
         Debug.Log($"[SERVER] {clientId} chose {choice}");
 
         if (player1Choice == null)
@@ -34,7 +96,6 @@ public class RPSGameManager : NetworkBehaviour
     {
         string resultP1, resultP2;
 
-        // Determine who wins
         if (player1Choice == player2Choice)
         {
             resultP1 = resultP2 = "Draw!";
@@ -54,13 +115,13 @@ public class RPSGameManager : NetworkBehaviour
 
         Debug.Log($"[SERVER] P1({player1Choice}) vs P2({player2Choice}) → {resultP1} / {resultP2}");
 
-        // Reveal both choices and results to each player
         ShowResultClientRpc(player1Choice, player2Choice, resultP1, player1Id);
         ShowResultClientRpc(player1Choice, player2Choice, resultP2, player2Id);
 
-        // Reset for next round
         player1Choice = null;
         player2Choice = null;
+
+        gameStarted.Value = false;
     }
 
     [ClientRpc]
