@@ -12,6 +12,7 @@ public class NetworkManagerUI : MonoBehaviour
 
     private void Start()
     {
+	    return;
         hostButton.onClick.AddListener(() =>
         {
             var transport = NetworkManager.Singleton.GetComponent<UnityTransport>();
