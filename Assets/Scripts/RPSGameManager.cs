@@ -8,13 +8,14 @@ public class RPSGameManager : NetworkBehaviour
     private string player1Choice;
     private string player2Choice;
 
-    private ulong player1Id;
-    private ulong player2Id;
+    public ulong Player1ClientId { get; private set; }
+    public ulong Player2ClientId { get; private set; }
 
     private HashSet<ulong> connectedPlayers = new HashSet<ulong>();
-    private NetworkVariable<bool> gameStarted = new NetworkVariable<bool>(false);
+    public NetworkVariable<bool> gameStarted = new NetworkVariable<bool>(false);
 
     public Button startGameButton;
+    public GameObject lobbyUI;
 
     public override void OnNetworkSpawn()
     {
@@ -27,7 +28,10 @@ public class RPSGameManager : NetworkBehaviour
         if (startGameButton != null)
         {
             startGameButton.gameObject.SetActive(false);
+            startGameButton.onClick.AddListener(() => StartGame());
         }
+
+        UpdateUI();
     }
 
     private void OnClientConnected(ulong clientId)
@@ -35,10 +39,13 @@ public class RPSGameManager : NetworkBehaviour
         connectedPlayers.Add(clientId);
         Debug.Log($"[GameManager] Player {clientId} connected. Total: {connectedPlayers.Count}");
 
-        if (connectedPlayers.Count == 2 && IsServer && startGameButton != null)
-        {
-            startGameButton.gameObject.SetActive(true);
-        }
+        // Assign player1 and player2 if not assigned
+        if (Player1ClientId == 0)
+            Player1ClientId = clientId;
+        else if (Player2ClientId == 0 && clientId != Player1ClientId)
+            Player2ClientId = clientId;
+
+        UpdateUI();
     }
 
     private void OnClientDisconnected(ulong clientId)
@@ -46,12 +53,20 @@ public class RPSGameManager : NetworkBehaviour
         connectedPlayers.Remove(clientId);
         Debug.Log($"[GameManager] Player {clientId} disconnected. Total: {connectedPlayers.Count}");
 
-        if (startGameButton != null)
-        {
-            startGameButton.gameObject.SetActive(false);
-        }
+        if (clientId == Player1ClientId) Player1ClientId = 0;
+        if (clientId == Player2ClientId) Player2ClientId = 0;
 
         gameStarted.Value = false;
+        UpdateUI();
+    }
+
+    private void UpdateUI()
+    {
+        if (startGameButton != null)
+            startGameButton.gameObject.SetActive(IsServer && connectedPlayers.Count == 2 && !gameStarted.Value);
+
+        if (lobbyUI != null)
+            lobbyUI.SetActive(!gameStarted.Value);
     }
 
     public void StartGame()
@@ -63,6 +78,8 @@ public class RPSGameManager : NetworkBehaviour
 
         player1Choice = null;
         player2Choice = null;
+
+        UpdateUI();
     }
 
     public void RegisterChoice(string choice, ulong clientId)
@@ -75,15 +92,18 @@ public class RPSGameManager : NetworkBehaviour
 
         Debug.Log($"[SERVER] {clientId} chose {choice}");
 
-        if (player1Choice == null)
+        if (player1Choice == null && clientId == Player1ClientId)
         {
             player1Choice = choice;
-            player1Id = clientId;
         }
-        else if (player2Choice == null && clientId != player1Id)
+        else if (player2Choice == null && clientId == Player2ClientId)
         {
             player2Choice = choice;
-            player2Id = clientId;
+        }
+        else
+        {
+            Debug.LogWarning("[GameManager] Invalid player choice or duplicate.");
+            return;
         }
 
         if (player1Choice != null && player2Choice != null)
@@ -115,13 +135,14 @@ public class RPSGameManager : NetworkBehaviour
 
         Debug.Log($"[SERVER] P1({player1Choice}) vs P2({player2Choice}) → {resultP1} / {resultP2}");
 
-        ShowResultClientRpc(player1Choice, player2Choice, resultP1, player1Id);
-        ShowResultClientRpc(player1Choice, player2Choice, resultP2, player2Id);
+        ShowResultClientRpc(player1Choice, player2Choice, resultP1, Player1ClientId);
+        ShowResultClientRpc(player1Choice, player2Choice, resultP2, Player2ClientId);
 
         player1Choice = null;
         player2Choice = null;
 
         gameStarted.Value = false;
+        UpdateUI();
     }
 
     [ClientRpc]
@@ -132,8 +153,10 @@ public class RPSGameManager : NetworkBehaviour
             UIManager ui = FindObjectOfType<UIManager>();
             if (ui != null)
             {
+                bool isPlayer1 = clientId == Player1ClientId;
                 ui.RevealChoices(p1Choice, p2Choice);
                 ui.DisplayResult(result);
+                ui.SetChoicesInteractable(false);
             }
             else
             {

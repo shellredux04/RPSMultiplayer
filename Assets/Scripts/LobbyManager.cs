@@ -1,21 +1,23 @@
 using System.Threading.Tasks;
-using UnityEngine;
-using TMPro;
 using Unity.Netcode;
 using Unity.Netcode.Transports.UTP;
-using Unity.Services.Core;
 using Unity.Services.Authentication;
+using Unity.Services.Core;
 using Unity.Services.Relay;
 using Unity.Services.Relay.Models;
+using TMPro;
+using UnityEngine;
 
 public class LobbyManager : MonoBehaviour
 {
     [Header("UI References")]
     public TMP_InputField joinCodeInput;
     public TextMeshProUGUI lobbyCodeText;
-    public GameObject lobbyUI;
-    public GameObject connectingBuffer;
-    public GameObject gameStartButton;
+    public GameObject lobbyUI;             // Entire lobby UI panel (host/join UI)
+    public GameObject connectingBuffer;   // Loading spinner panel
+    public GameObject gameStartButton;    // Start Game button (only visible to host)
+
+    public RPSGameManager gameManager;
 
     private UnityTransport transport;
     private string joinCode = "";
@@ -25,14 +27,14 @@ public class LobbyManager : MonoBehaviour
         transport = NetworkManager.Singleton.GetComponent<UnityTransport>();
 
         if (joinCodeInput != null)
-        {
             joinCodeInput.onValueChanged.AddListener(OnJoinCodeInputChanged);
-        }
 
         await InitializeUnityServices();
 
-        // Initial UI state
         ShowLobbyUI();
+
+        // Hook button events
+        gameStartButton.SetActive(false);
     }
 
     private void OnJoinCodeInputChanged(string input)
@@ -40,24 +42,21 @@ public class LobbyManager : MonoBehaviour
         joinCode = input.Trim();
     }
 
+    // Called by UI Button OnClick
     public void Host()
     {
         Debug.Log("[LobbyManager] Host() called.");
         _ = HostRelayAsync(4);
     }
 
+    // Called by UI Button OnClick
     public void Join()
     {
         Debug.Log("[LobbyManager] Join() called.");
-
         if (!string.IsNullOrEmpty(joinCode))
-        {
             _ = JoinRelayAsync(joinCode);
-        }
         else
-        {
             Debug.LogWarning("[LobbyManager] Join code is empty.");
-        }
     }
 
     private async Task HostRelayAsync(int maxPlayers)
@@ -86,7 +85,10 @@ public class LobbyManager : MonoBehaviour
                 Debug.Log("[LobbyManager] Host started successfully.");
                 lobbyCodeText.text = $"Lobby Code: {code}";
                 lobbyCodeText.gameObject.SetActive(true);
+
                 gameStartButton.SetActive(true);
+                lobbyUI.SetActive(true);  // Show lobby UI during waiting
+
                 ShowLobbyUI();
             }
             else
@@ -132,6 +134,8 @@ public class LobbyManager : MonoBehaviour
                 Debug.Log("[LobbyManager] Client joined successfully.");
                 lobbyCodeText.text = $"Joined Lobby: {code}";
                 gameStartButton.SetActive(false);
+                lobbyUI.SetActive(true);  // Show lobby UI during waiting
+
                 ShowLobbyUI();
             }
             else
@@ -149,6 +153,27 @@ public class LobbyManager : MonoBehaviour
         {
             Debug.LogError($"[LobbyManager] Unknown join error: {e.Message}");
             ShowLobbyUI();
+        }
+    }
+
+    // Called by Start Game Button
+    public void StartGame()
+    {
+        Debug.Log("[LobbyManager] StartGame() called.");
+
+        if (gameManager != null)
+        {
+            // Hide the lobby UI panel completely when game starts
+            lobbyUI.SetActive(false);
+
+            gameStartButton.SetActive(false);
+
+            // Start the actual game logic
+            gameManager.StartGame();
+        }
+        else
+        {
+            Debug.LogError("[LobbyManager] GameManager reference not assigned.");
         }
     }
 
