@@ -65,7 +65,7 @@ public class UIManager : MonoBehaviour
         }
     }
 
-    private void SetChoiceButtonsInteractable(bool value)
+    public void SetChoiceButtonsInteractable(bool value)
     {
         rockButton.interactable = value;
         paperButton.interactable = value;

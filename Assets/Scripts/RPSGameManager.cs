@@ -12,9 +12,13 @@ public class RPSGameManager : NetworkBehaviour
     private ulong player2Id;
 
     private HashSet<ulong> connectedPlayers = new HashSet<ulong>();
-    public NetworkVariable<bool> gameStarted = new NetworkVariable<bool>(false); // Make public to access in UIManager
+    public NetworkVariable<bool> gameStarted = new NetworkVariable<bool>(false);
 
     public Button startGameButton;
+
+    // Track wins using NetworkVariables for sync
+    private NetworkVariable<int> player1Wins = new NetworkVariable<int>(0);
+    private NetworkVariable<int> player2Wins = new NetworkVariable<int>(0);
 
     public override void OnNetworkSpawn()
     {
@@ -52,6 +56,8 @@ public class RPSGameManager : NetworkBehaviour
         }
 
         gameStarted.Value = false;
+        player1Wins.Value = 0;
+        player2Wins.Value = 0;
     }
 
     public void StartGame()
@@ -63,6 +69,10 @@ public class RPSGameManager : NetworkBehaviour
 
         player1Choice = null;
         player2Choice = null;
+
+        // Reset wins for new game session
+        player1Wins.Value = 0;
+        player2Wins.Value = 0;
     }
 
     public void RegisterChoice(string choice, ulong clientId)
@@ -106,14 +116,17 @@ public class RPSGameManager : NetworkBehaviour
         {
             resultP1 = "You Win!";
             resultP2 = "You Lose!";
+            player1Wins.Value++;
         }
         else
         {
             resultP1 = "You Lose!";
             resultP2 = "You Win!";
+            player2Wins.Value++;
         }
 
         Debug.Log($"[SERVER] P1({player1Choice}) vs P2({player2Choice}) → {resultP1} / {resultP2}");
+        Debug.Log($"[SERVER] Score - Player1: {player1Wins.Value} | Player2: {player2Wins.Value}");
 
         ShowResultClientRpc(player1Choice, player2Choice, resultP1, player1Id);
         ShowResultClientRpc(player1Choice, player2Choice, resultP2, player2Id);
@@ -121,7 +134,42 @@ public class RPSGameManager : NetworkBehaviour
         player1Choice = null;
         player2Choice = null;
 
-        gameStarted.Value = false;
+        // Check for win condition: first to 3
+        if (player1Wins.Value >= 3 || player2Wins.Value >= 3)
+        {
+            gameStarted.Value = false; // End game
+            AnnounceGameWinner();
+        }
+        else
+        {
+            // Continue game
+            gameStarted.Value = true;
+        }
+    }
+
+    private void AnnounceGameWinner()
+    {
+        string winnerMessage;
+
+        if (player1Wins.Value >= 3)
+            winnerMessage = "Player 1 wins the match!";
+        else if (player2Wins.Value >= 3)
+            winnerMessage = "Player 2 wins the match!";
+        else
+            winnerMessage = "No winner yet.";
+
+        AnnounceWinnerClientRpc(winnerMessage);
+    }
+
+    [ClientRpc]
+    private void AnnounceWinnerClientRpc(string message)
+    {
+        UIManager ui = FindObjectOfType<UIManager>();
+        if (ui != null)
+        {
+            ui.DisplayResult(message);
+            ui.SetChoiceButtonsInteractable(false);
+        }
     }
 
     [ClientRpc]
@@ -132,7 +180,7 @@ public class RPSGameManager : NetworkBehaviour
             UIManager ui = FindObjectOfType<UIManager>();
             if (ui != null)
             {
-                ui.RevealChoices(p1Choice, p2Choice); // Minimal version below
+                ui.RevealChoices(p1Choice, p2Choice);
                 ui.DisplayResult(result);
             }
             else
