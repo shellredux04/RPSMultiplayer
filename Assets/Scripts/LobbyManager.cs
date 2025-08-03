@@ -1,3 +1,4 @@
+using System.Collections;
 using System.Threading.Tasks;
 using UnityEngine;
 using TMPro;
@@ -17,10 +18,12 @@ public class LobbyManager : NetworkBehaviour
     public GameObject connectingBuffer;
     public GameObject gameStartButton;
 
+    [Header("Countdown")]
+    public TextMeshProUGUI countdownText;
+
     private UnityTransport transport;
     private string joinCode = "";
 
-    // Make NetworkVariable public to allow read access from PlayerHandler
     public NetworkVariable<bool> gameStarted = new NetworkVariable<bool>(
         false,
         NetworkVariableReadPermission.Everyone,
@@ -41,6 +44,10 @@ public class LobbyManager : NetworkBehaviour
         await InitializeUnityServices();
 
         ShowLobbyUI();
+
+        // Hide countdown text at start
+        if (countdownText != null)
+            countdownText.gameObject.SetActive(false);
     }
 
     private void OnJoinCodeInputChanged(string input)
@@ -59,11 +66,35 @@ public class LobbyManager : NetworkBehaviour
             _ = JoinRelayAsync(joinCode);
     }
 
-    // Called by the Start button in the lobby UI (only host can call)
+    // Called by the Start button in the lobby UI (only host calls this)
     public void StartGame()
     {
         if (IsServer)
-            gameStarted.Value = true;
+        {
+            StartCoroutine(StartGameWithCountdown());
+        }
+    }
+
+    private IEnumerator StartGameWithCountdown()
+    {
+        ShowCountdownClientRpc();
+
+        int count = 3;
+
+        while (count > 0)
+        {
+            UpdateCountdownClientRpc(count.ToString());
+            yield return new WaitForSeconds(1f);
+            count--;
+        }
+
+        UpdateCountdownClientRpc("GO!");
+        yield return new WaitForSeconds(1f);
+
+        HideCountdownClientRpc();
+
+        // Now officially start the game
+        gameStarted.Value = true;
     }
 
     private void OnGameStartedChanged(bool previous, bool current)
@@ -71,13 +102,35 @@ public class LobbyManager : NetworkBehaviour
         if (current)
         {
             Debug.Log("[LobbyManager] Game started! Hiding lobby UI.");
-            if (lobbyUI != null) lobbyUI.SetActive(false);
+            if (lobbyUI != null)
+                lobbyUI.SetActive(false);
         }
     }
 
     public bool IsGameStarted()
     {
         return gameStarted.Value;
+    }
+
+    [ClientRpc]
+    private void ShowCountdownClientRpc()
+    {
+        if (countdownText != null)
+            countdownText.gameObject.SetActive(true);
+    }
+
+    [ClientRpc]
+    private void UpdateCountdownClientRpc(string text)
+    {
+        if (countdownText != null)
+            countdownText.text = text;
+    }
+
+    [ClientRpc]
+    private void HideCountdownClientRpc()
+    {
+        if (countdownText != null)
+            countdownText.gameObject.SetActive(false);
     }
 
     private async Task HostRelayAsync(int maxPlayers)
