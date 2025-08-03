@@ -13,36 +13,11 @@ public class PlayerHandler : NetworkBehaviour
             gameManager = FindObjectOfType<RPSGameManager>();
             uiManager = FindObjectOfType<UIManager>();
             uiManager.SetPlayer(this);
-            uiManager.SetChoicesInteractable(false);  // Start disabled until game starts
         }
 
         if (IsServer && gameManager == null)
         {
             gameManager = FindObjectOfType<RPSGameManager>();
-        }
-
-        // Listen for game started changes
-        if (gameManager != null)
-            gameManager.gameStarted.OnValueChanged += OnGameStartedChanged;
-    }
-
-    private void OnDestroy()
-    {
-        if (gameManager != null)
-            gameManager.gameStarted.OnValueChanged -= OnGameStartedChanged;
-    }
-
-    private void OnGameStartedChanged(bool previous, bool current)
-    {
-        if (!IsOwner) return;
-
-        uiManager.SetChoicesInteractable(current);
-
-        if (!current)
-        {
-            // Clear UI choices and result on game end
-            uiManager.ClearChoices();
-            uiManager.ClearResult();
         }
     }
 
@@ -79,13 +54,17 @@ public class PlayerHandler : NetworkBehaviour
         if (uiManager == null)
             uiManager = FindObjectOfType<UIManager>();
 
-        bool isPlayer1 = false;
-
-        if (gameManager != null)
-        {
-            isPlayer1 = OwnerClientId == gameManager.Player1ClientId;
-        }
-
+        bool isPlayer1 = IsServer;
         uiManager?.ShowOwnChoice(choice, isPlayer1);
+    }
+
+    [ClientRpc]
+    public void RevealChoicesClientRpc(string p1Choice, string p2Choice, string result)
+    {
+        if (uiManager == null)
+            uiManager = FindObjectOfType<UIManager>();
+
+        uiManager.RevealChoices(p1Choice, p2Choice);
+        uiManager.DisplayResult(result);
     }
 }
