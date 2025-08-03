@@ -12,7 +12,7 @@ public class RPSGameManager : NetworkBehaviour
     private ulong player2Id;
 
     private HashSet<ulong> connectedPlayers = new HashSet<ulong>();
-    private NetworkVariable<bool> gameStarted = new NetworkVariable<bool>(false);
+    public NetworkVariable<bool> gameStarted = new NetworkVariable<bool>(false); // Make public to access in UIManager
 
     public Button startGameButton;
 
@@ -132,7 +132,7 @@ public class RPSGameManager : NetworkBehaviour
             UIManager ui = FindObjectOfType<UIManager>();
             if (ui != null)
             {
-                ui.RevealChoices(p1Choice, p2Choice);
+                ui.RevealChoices(p1Choice, p2Choice); // Minimal version below
                 ui.DisplayResult(result);
             }
             else

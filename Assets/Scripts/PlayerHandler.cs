@@ -39,9 +39,7 @@ public class PlayerHandler : NetworkBehaviour
             }
         }
 
-        // Send choice back to the client to display hand early
         ShowOwnChoiceClientRpc(choice, OwnerClientId);
-
         gameManager.RegisterChoice(choice, OwnerClientId);
     }
 
@@ -66,5 +64,16 @@ public class PlayerHandler : NetworkBehaviour
 
         uiManager.RevealChoices(p1Choice, p2Choice);
         uiManager.DisplayResult(result);
+    }
+
+    // Checks if the game has started by accessing LobbyManager's NetworkVariable via public method
+    public bool IsGameStarted()
+    {
+        var lobbyManager = FindObjectOfType<LobbyManager>();
+        if (lobbyManager != null)
+        {
+            return lobbyManager.IsGameStarted();
+        }
+        return false;
     }
 }

@@ -10,7 +10,7 @@ public class UIManager : MonoBehaviour
     public Button scissorsButton;
 
     [Header("UI Elements")]
-    public Text resultText;
+    public TMPro.TextMeshProUGUI resultText;
     public Image player1ChoiceImage;
     public Image player2ChoiceImage;
     public Button quitButton;
@@ -21,20 +21,20 @@ public class UIManager : MonoBehaviour
     public Sprite scissorsSprite;
 
     private PlayerHandler player;
-
     private Dictionary<string, Sprite> choiceSprites;
 
     private void Start()
     {
         resultText.text = "";
 
-        // Button listeners
+        // Disable choice buttons at start
+        SetChoiceButtonsInteractable(false);
+
         rockButton.onClick.AddListener(() => player?.MakeChoice("Rock"));
         paperButton.onClick.AddListener(() => player?.MakeChoice("Paper"));
         scissorsButton.onClick.AddListener(() => player?.MakeChoice("Scissors"));
         quitButton.onClick.AddListener(QuitGame);
 
-        // Setup sprite dictionary
         choiceSprites = new Dictionary<string, Sprite>
         {
             {"Rock", rockSprite},
@@ -42,7 +42,6 @@ public class UIManager : MonoBehaviour
             {"Scissors", scissorsSprite}
         };
 
-        // Hide choice images initially
         player1ChoiceImage.gameObject.SetActive(false);
         player2ChoiceImage.gameObject.SetActive(false);
     }
@@ -50,6 +49,27 @@ public class UIManager : MonoBehaviour
     public void SetPlayer(PlayerHandler handler)
     {
         player = handler;
+        StartCoroutine(CheckForGameStart());
+    }
+
+    private System.Collections.IEnumerator CheckForGameStart()
+    {
+        while (true)
+        {
+            if (player != null && player.IsGameStarted())
+            {
+                SetChoiceButtonsInteractable(true);
+                yield break;
+            }
+            yield return new WaitForSeconds(0.5f);
+        }
+    }
+
+    private void SetChoiceButtonsInteractable(bool value)
+    {
+        rockButton.interactable = value;
+        paperButton.interactable = value;
+        scissorsButton.interactable = value;
     }
 
     public void ShowOwnChoice(string choice, bool isPlayer1)

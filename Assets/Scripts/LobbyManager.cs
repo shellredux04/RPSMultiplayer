@@ -8,7 +8,7 @@ using Unity.Services.Authentication;
 using Unity.Services.Relay;
 using Unity.Services.Relay.Models;
 
-public class LobbyManager : MonoBehaviour
+public class LobbyManager : NetworkBehaviour
 {
     [Header("UI References")]
     public TMP_InputField joinCodeInput;
@@ -20,18 +20,26 @@ public class LobbyManager : MonoBehaviour
     private UnityTransport transport;
     private string joinCode = "";
 
+    // Make NetworkVariable public to allow read access from PlayerHandler
+    public NetworkVariable<bool> gameStarted = new NetworkVariable<bool>(
+        false,
+        NetworkVariableReadPermission.Everyone,
+        NetworkVariableWritePermission.Server);
+
+    private void Awake()
+    {
+        gameStarted.OnValueChanged += OnGameStartedChanged;
+    }
+
     private async void Start()
     {
         transport = NetworkManager.Singleton.GetComponent<UnityTransport>();
 
         if (joinCodeInput != null)
-        {
             joinCodeInput.onValueChanged.AddListener(OnJoinCodeInputChanged);
-        }
 
         await InitializeUnityServices();
 
-        // Initial UI state
         ShowLobbyUI();
     }
 
@@ -42,34 +50,44 @@ public class LobbyManager : MonoBehaviour
 
     public void Host()
     {
-        Debug.Log("[LobbyManager] Host() called.");
         _ = HostRelayAsync(4);
     }
 
     public void Join()
     {
-        Debug.Log("[LobbyManager] Join() called.");
-
         if (!string.IsNullOrEmpty(joinCode))
-        {
             _ = JoinRelayAsync(joinCode);
-        }
-        else
+    }
+
+    // Called by the Start button in the lobby UI (only host can call)
+    public void StartGame()
+    {
+        if (IsServer)
+            gameStarted.Value = true;
+    }
+
+    private void OnGameStartedChanged(bool previous, bool current)
+    {
+        if (current)
         {
-            Debug.LogWarning("[LobbyManager] Join code is empty.");
+            Debug.Log("[LobbyManager] Game started! Hiding lobby UI.");
+            if (lobbyUI != null) lobbyUI.SetActive(false);
         }
+    }
+
+    public bool IsGameStarted()
+    {
+        return gameStarted.Value;
     }
 
     private async Task HostRelayAsync(int maxPlayers)
     {
         ShowConnectingBuffer();
-        Debug.Log("[LobbyManager] Starting Relay host...");
 
         try
         {
             Allocation allocation = await RelayService.Instance.CreateAllocationAsync(maxPlayers);
             string code = await RelayService.Instance.GetJoinCodeAsync(allocation.AllocationId);
-            Debug.Log($"[Relay] Join Code: {code}");
 
             transport.SetRelayServerData(
                 allocation.RelayServer.IpV4,
@@ -79,11 +97,8 @@ public class LobbyManager : MonoBehaviour
                 allocation.ConnectionData
             );
 
-            bool success = NetworkManager.Singleton.StartHost();
-
-            if (success)
+            if (NetworkManager.Singleton.StartHost())
             {
-                Debug.Log("[LobbyManager] Host started successfully.");
                 lobbyCodeText.text = $"Lobby Code: {code}";
                 lobbyCodeText.gameObject.SetActive(true);
                 gameStartButton.SetActive(true);
@@ -91,18 +106,12 @@ public class LobbyManager : MonoBehaviour
             }
             else
             {
-                Debug.LogError("[LobbyManager] Host failed to start.");
                 ShowLobbyUI();
             }
         }
-        catch (RelayServiceException e)
-        {
-            Debug.LogError($"[LobbyManager] Relay host error: {e.Message}");
-            ShowLobbyUI();
-        }
         catch (System.Exception e)
         {
-            Debug.LogError($"[LobbyManager] Unknown host error: {e.Message}");
+            Debug.LogError($"[LobbyManager] Relay Host Error: {e.Message}");
             ShowLobbyUI();
         }
     }
@@ -110,7 +119,6 @@ public class LobbyManager : MonoBehaviour
     private async Task JoinRelayAsync(string code)
     {
         ShowConnectingBuffer();
-        Debug.Log($"[LobbyManager] Joining Relay with code: {code}");
 
         try
         {
@@ -125,47 +133,31 @@ public class LobbyManager : MonoBehaviour
                 joinAllocation.HostConnectionData
             );
 
-            bool success = NetworkManager.Singleton.StartClient();
-
-            if (success)
+            if (NetworkManager.Singleton.StartClient())
             {
-                Debug.Log("[LobbyManager] Client joined successfully.");
                 lobbyCodeText.text = $"Joined Lobby: {code}";
                 gameStartButton.SetActive(false);
                 ShowLobbyUI();
             }
             else
             {
-                Debug.LogError("[LobbyManager] Client failed to connect.");
                 ShowLobbyUI();
             }
         }
-        catch (RelayServiceException e)
-        {
-            Debug.LogError($"[LobbyManager] Relay join error: {e.Message}");
-            ShowLobbyUI();
-        }
         catch (System.Exception e)
         {
-            Debug.LogError($"[LobbyManager] Unknown join error: {e.Message}");
+            Debug.LogError($"[LobbyManager] Relay Join Error: {e.Message}");
             ShowLobbyUI();
         }
     }
 
     private async Task InitializeUnityServices()
     {
-        Debug.Log("[LobbyManager] Initializing Unity Services...");
-
         if (UnityServices.State != ServicesInitializationState.Initialized)
-        {
             await UnityServices.InitializeAsync();
-        }
 
         if (!AuthenticationService.Instance.IsSignedIn)
-        {
             await AuthenticationService.Instance.SignInAnonymouslyAsync();
-            Debug.Log("[LobbyManager] Signed in anonymously.");
-        }
     }
 
     private void ShowLobbyUI()
