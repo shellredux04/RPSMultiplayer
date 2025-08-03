@@ -939,6 +939,7 @@ GameObject:
   m_Component:
   - component: {fileID: 603452913}
   - component: {fileID: 603452915}
+  - component: {fileID: 603452914}
   m_Layer: 5
   m_Name: Text (TMP)
   m_TagString: Untagged
